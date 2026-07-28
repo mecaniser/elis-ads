@@ -1,0 +1,62 @@
+name: Upstream sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 8 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Elis Ads
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: Fetch canonical upstream
+        run: |
+          git remote add upstream https://github.com/AgriciDaniel/claude-ads.git
+          git fetch upstream main
+
+      - name: Stop when already current
+        id: status
+        run: |
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create synchronization branch
+        if: steps.status.outputs.current == 'false'
+        env:
+          SYNC_BRANCH: sync/upstream
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --force-create "$SYNC_BRANCH"
+          git merge --no-edit upstream/main
+          git push --force-with-lease origin "$SYNC_BRANCH"
+
+      - name: Open or refresh synchronization pull request
+        if: steps.status.outputs.current == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SYNC_BRANCH: sync/upstream
+        run: |
+          if ! gh pr view "$SYNC_BRANCH" --json number >/dev/null 2>&1; then
+            gh pr create \
+              --base main \
+              --head "$SYNC_BRANCH" \
+              --title "chore: sync canonical Claude Ads upstream" \
+              --body "Automated weekly synchronization from AgriciDaniel/claude-ads. Review the upstream changes and required checks before merging."
+          fi

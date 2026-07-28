@@ -1,6 +1,30 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="Claude Ads, Claude-first paid-media operations across twelve advertising platforms" width="100%">
+  <img src="assets/elis-ads-banner.svg" alt="Elis Ads — run, optimize, and audit paid advertising" width="100%">
 </p>
+
+# Elis Ads
+
+Elis Ads is the `mecaniser` operating fork of Claude Ads, focused on three
+day-to-day outcomes: launching well-structured campaigns, improving live
+campaign performance, and auditing existing or newly built advertising
+accounts.
+
+It stays intentionally close to
+[`AgriciDaniel/claude-ads`](https://github.com/AgriciDaniel/claude-ads) so
+upstream security, platform, evidence, and workflow improvements can be merged
+without maintaining a disconnected codebase. The product commands and internal
+package names remain compatible with upstream.
+
+| Elis Ads workflow | Command |
+| --- | --- |
+| Run new campaigns safely | `/ads setup`, `/ads plan`, `/ads create`, `/ads launch --draft` |
+| Optimize existing campaigns | `/ads monitor`, `/ads optimize --draft`, `/ads experiment` |
+| Audit existing or new campaigns | `/ads audit`, `/ads report`, `/ads validate` |
+
+See [ELIS_ADS.md](ELIS_ADS.md) for the fork’s operating focus and
+[UPSTREAM.md](UPSTREAM.md) for its upstream synchronization policy.
+
+---
 
 # Claude Ads
 
