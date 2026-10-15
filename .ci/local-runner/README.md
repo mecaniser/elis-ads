@@ -12,6 +12,7 @@ Provision a pristine mount-free `ci-x64-base` from `base.yaml`, then run:
 
 ```sh
 limactl shell ci-x64-base sudo bash < provision.sh
+limactl shell ci-x64-base sudo bash < python-toolcache.sh
 limactl shell ci-x64-base sudo tee /etc/nftables.conf < network.nft >/dev/null
 limactl shell ci-x64-base sudo systemctl enable --now nftables
 limactl shell ci-x64-base sudo nft list table inet ci_isolation
