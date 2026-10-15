@@ -21,3 +21,8 @@ portForwards:
 containerd:
   user: false
   system: false
+
+# Avoid per-boot host-resolver DNAT into a private address blocked by isolation.
+hostResolver:
+  enabled: false
+dns: [1.1.1.1, 8.8.8.8]

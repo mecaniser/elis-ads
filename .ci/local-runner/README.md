@@ -21,7 +21,7 @@ python3 install.py
 
 No repository jobs run in the base. Workers have no host mounts, forwarded agents,
 host Docker socket or sudo. Rootless Docker and root-owned nft rules block private
-networks and IPv6. QEMU DNS is restricted to 192.168.5.3:53. Container UID 1001 gets
+networks and IPv6. Public DNS is explicit and Lima host-resolver DNAT is disabled. Container UID 1001 gets
 a default ACL only on the disposable `_work` directory so existing non-root Docker
 jobs can write their bind mounts. Package installation occurs during provisioning;
 workflow package checks verify the preinstalled dependencies without sudo.
@@ -29,7 +29,7 @@ workflow package checks verify the preinstalled dependencies without sudo.
 ## macOS
 
 Use Tart 2.41.0 from its official release, with a pristine macOS 15 ARM64 base.
-Set 4 CPUs and 6144 MB memory. Run with `--no-graphics --no-audio
+Set 4 CPUs and 4096 MB memory. Run with `--no-graphics --no-audio
 --no-usb-accessories --no-clipboard`, with no host shares. Before registration:
 
 1. Generate the host-only management Ed25519 key outside all checkouts.
@@ -62,3 +62,10 @@ controller tests, and actionlint for workflow syntax. Acceptance additionally
 requires real GitHub jobs on each platform; static checks alone are insufficient.
 Rollback is a focused PR restoring runner routing, retaining every check.
 Subscriptions, spending limits, required checks and production hosting are unchanged.
+
+## Provisioned macOS image provenance
+
+Initial upstream image: `ghcr.io/cirruslabs/macos-sequoia-base@sha256:eee659985b01e4df2a6c0754bd8d25e54969933c43fdcd4edef8bea337b3d354`.
+Tart 2.41.0 official archive SHA-256:
+`07faafc77acc668fcfb2fbe97811622567fb89c650db401a470f72e7c4ddc560`.
+Guest hardening and tool provisioning are applied before making the stopped base.
