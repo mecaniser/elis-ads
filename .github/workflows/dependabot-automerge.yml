@@ -7,7 +7,7 @@ permissions: {}
 jobs:
   automerge:
     if: github.actor == 'dependabot[bot]'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, owned-linux-x64]
     timeout-minutes: 10
     permissions:
       contents: write

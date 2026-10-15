@@ -1,0 +1,2 @@
+self-hosted-runner:
+  labels: [owned-linux-x64, owned-macos15, owned-macos26, ubicloud-standard-8]

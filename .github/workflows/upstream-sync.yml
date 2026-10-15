@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, owned-linux-x64]
     steps:
       - name: Check out Elis Ads
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
