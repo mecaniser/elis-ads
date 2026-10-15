@@ -62,3 +62,7 @@ mkdir -p /opt/actions-runner/_work
 chown runner:runner /opt/actions-runner/_work
 subuid=$(awk -F: '$1=="runner"{print $2}' /etc/subuid)
 setfacl -m u:$((subuid+1000)):rwx,d:u:$((subuid+1000)):rwx /opt/actions-runner/_work
+
+# Avoid QEMU TCG's intermittent IO-APIC timer boot panic on Apple Silicon.
+printf '%s\n' 'GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT noapic"' > /etc/default/grub.d/99-ci-timer.cfg
+update-grub

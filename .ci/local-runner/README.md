@@ -21,7 +21,8 @@ python3 install.py
 
 No repository jobs run in the base. Workers have no host mounts, forwarded agents,
 host Docker socket or sudo. Rootless Docker and root-owned nft rules block private
-networks and IPv6. Public DNS is explicit and Lima host-resolver DNAT is disabled. Container UID 1001 gets
+networks and IPv6. Public DNS is explicit and Lima host-resolver DNAT is disabled. The guest uses
+`noapic` to avoid an intermittent QEMU emulation boot-timer panic. Container UID 1001 gets
 a default ACL only on the disposable `_work` directory so existing non-root Docker
 jobs can write their bind mounts. Package installation occurs during provisioning;
 workflow package checks verify the preinstalled dependencies without sudo.
