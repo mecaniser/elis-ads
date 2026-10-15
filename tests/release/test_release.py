@@ -427,6 +427,13 @@ def test_reviewed_intel_wheel_matches_bundled_bytes() -> None:
     assert artifact["url"] == release.OWNED_INTEL_WHEEL_URL
 
 
+def test_managed_installer_and_release_verifier_trust_the_same_inventory() -> None:
+    root = RELEASE_SCRIPT.parents[1]
+    receipt = release._load_local_module(root, "scripts/write_install_receipt.py", "install_receipt_anchor_test")
+    inventory_digest = hashlib.sha256((root / "control-plane/manifests/dependency-inventory.json").read_bytes()).hexdigest()
+    assert receipt.EXPECTED_INVENTORY_SHA256 == inventory_digest == release.EXPECTED_DEPENDENCY_INVENTORY_SHA256
+
+
 @pytest.mark.parametrize("suffix", ["?download=1", " --trusted-host attacker.invalid", "/other.whl"])
 def test_lock_rejects_unreviewed_find_links(tmp_path: Path, suffix: str) -> None:
     lock = tmp_path / "requirements.lock"
