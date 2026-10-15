@@ -24,14 +24,14 @@
     },
     {
       "artifact": {
-        "filename": "cryptography-48.0.1-cp311-abi3-win_amd64.whl",
-        "sha256": "39489bfca54c7a1f6b297efcd8bc608ab92d16c4ca631b0cad4da46724588b24",
-        "url": "https://files.pythonhosted.org/packages/c5/69/0572c77dbace6fef72f33755bd52ea399c71367250d366237f8691826b9e/cryptography-48.0.1-cp311-abi3-win_amd64.whl"
+        "filename": "cryptography-50.0.2-cp311-abi3-win_amd64.whl",
+        "sha256": "7afa5a6602a9f29af1f3a2965f831bae7c9d5d597b7cbb716d41ab3b7d89879c",
+        "url": "https://files.pythonhosted.org/packages/9a/4f/adfc442765721292fff86d314ce385d3249d22db42295c0dd057727b60f3/cryptography-50.0.2-cp311-abi3-win_amd64.whl"
       },
       "direct": true,
       "name": "cryptography",
-      "purl": "pkg:pypi/cryptography@48.0.1",
-      "version": "48.0.1"
+      "purl": "pkg:pypi/cryptography@50.0.2",
+      "version": "50.0.2"
     },
     {
       "artifact": {
@@ -122,26 +122,26 @@
   "evidence_class": "cross-target-pip-resolution-requiring-native-ci-confirmation",
   "evidence_id": "development-windows-cp311",
   "normalization_notes": [
-    "The foreign-platform source report did not evaluate the win32 colorama marker; the exact lock marker supplies that occurrence and native CI must confirm it."
+    "Explicit target closure, including Windows-only colorama where applicable, selected with pip --no-deps to avoid host marker evaluation in cross-platform resolution. Existing unaffected wheel URLs are retained; updated packages are selected by pip for the target. Publisher dependency edges are validated separately by the release verifier; native CI must confirm installation and pip check."
   ],
-  "platform_policy": "Exact lowest-common lock with target-selected PyPI wheels",
-  "resolved_at": "2026-07-11T00:00:00Z",
+  "platform_policy": "Exact lowest-common lock with target-selected reviewed wheels",
+  "resolved_at": "2026-10-15T00:00:00Z",
   "resolver": "pip / PyPI",
   "schema_version": "1.0.0",
-  "source_date_epoch": 1783728000,
+  "source_date_epoch": 1792022400,
   "source_environment": {
     "implementation_name": "cpython",
-    "implementation_version": "3.14.4",
+    "implementation_version": "3.14.7",
     "os_name": "posix",
-    "platform_machine": "x86_64",
+    "platform_machine": "arm64",
     "platform_python_implementation": "CPython",
-    "platform_release": "6.19.14-101.fc44.x86_64",
-    "platform_system": "Linux",
-    "platform_version": "#1 SMP PREEMPT_DYNAMIC Fri May  8 18:24:24 UTC 2026",
-    "python_full_version": "3.14.4",
+    "platform_release": "27.2.0",
+    "platform_system": "Darwin",
+    "platform_version": "Darwin Kernel Version 27.2.0: Tue Sep 29 22:00:39 PDT 2026; root:xnu-13432.40.177.0.3~56/RELEASE_ARM64_T6000",
+    "python_full_version": "3.14.7",
     "python_version": "3.14",
-    "sys_platform": "linux"
+    "sys_platform": "darwin"
   },
-  "source_pip_version": "26.0.1",
-  "source_report_sha256": "6ecb2325ac69fb8c4753b676c9dfaecf0c085badbba3296c41c492aed1abbd5a"
+  "source_pip_version": "26.2.1",
+  "source_report_sha256": "3693f89ff4c4c3096a96a628eeb56242ae1e145da01b9250829940f1df954b04"
 }

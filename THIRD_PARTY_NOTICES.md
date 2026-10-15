@@ -26,7 +26,10 @@ Dependencies are installed from their publishers and retain their own licenses:
 - Requests: Apache-2.0.
 - urllib3: MIT.
 - Playwright for Python: Apache-2.0.
-- Cryptography: Apache-2.0 or BSD-3-Clause.
+- Cryptography: Apache-2.0 or BSD-3-Clause. The reviewed Intel macOS wheel is
+  built from publisher sources and statically links OpenSSL 3.5.9 (Apache-2.0);
+  its embedded OpenSSL license and pinned build evidence are preserved in the
+  dependency inventory and `control-plane/vendor/`.
 - Pillow: MIT-CMU.
 - ReportLab and WeasyPrint code: BSD-3-Clause. ReportLab wheels also include
   DarkGarden under GPL-2.0-or-later with a document-embedding exception and
@@ -41,7 +44,7 @@ summary. In particular, Pyphen code offers GPL-2.0-or-later OR
 LGPL-2.1-or-later OR MPL-1.1 alternatives and its dictionaries have
 language-specific terms. The dependency inventory preserves the exact path,
 SHA-256, text, and artifact assignment for every license/notice-like file found
-across all 119 selected wheels. The webencodings 0.5.1 wheel contains no matching
+across all 120 selected wheels. The webencodings 0.5.1 wheel contains no matching
 embedded path and is explicitly recorded as documentless rather than assigned
 invented notice text.
 

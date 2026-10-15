@@ -112,17 +112,28 @@ ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 # notice review. The inventory digest is filled from the reviewed canonical
 # document; keeping it in executable verifier code makes self-consistent
 # archive/manifest/SBOM/checksum forgery fail closed.
-EXPECTED_DEPENDENCY_INVENTORY_SHA256 = "48ed1cdd3023bdb9781e7ffe9d987fb9425cc23e2dea053e2da5e8d461e588de"
-EXPECTED_THIRD_PARTY_NOTICES_SHA256 = "b90c38b4cce60c06c0090be31ee721d3482640923d9ff6f3c711c047317746d0"
-EXPECTED_EXTERNAL_RUNTIME_DEPENDENCIES_SHA256 = "c5962746f3a49570c810525c5a8557a3884e64e3b764476ff18cb65741853bc2"
-INVENTORY_RESOLVED_AT = "2026-07-11T00:00:00Z"
-INVENTORY_SOURCE_DATE_EPOCH = 1783728000
+EXPECTED_DEPENDENCY_INVENTORY_SHA256 = "04479c8c47741d3e0c2c50f4f3201c34d68fdddb860888a3106fe8bc3e714107"
+EXPECTED_THIRD_PARTY_NOTICES_SHA256 = "16af040b27eadd4e307bc30dfdab14ae652db4af8616bca8b618b864b2916b4b"
+EXPECTED_EXTERNAL_RUNTIME_DEPENDENCIES_SHA256 = "158c39fc4da26c4f28c321d0618a58c216100e092f9af024d0f17b295a17645e"
+# Filled only after independent review of the native Intel build artifact.
+EXPECTED_INTEL_WHEEL_BUILD_SHA256 = "1f4335082c56cb82371509634e1083891976b81061638d0dda7f24f9aed4481b"
+OWNED_INTEL_WHEEL_URL = "https://raw.githubusercontent.com/mecaniser/elis-ads/d6db674700a7d731abefe7bdf0898dc86059cf1b/control-plane/vendor/wheels/cryptography-50.0.2-cp311-abi3-macosx_11_0_x86_64.whl"
+INTEL_WHEEL_PATH = "control-plane/vendor/wheels/cryptography-50.0.2-cp311-abi3-macosx_11_0_x86_64.whl"
+DEPENDENCY_MANIFEST_PATHS = {
+    "requirements.txt", "requirements-dev.txt", "requirements.lock",
+    "requirements-dev.lock", "pyproject.toml",
+    "control-plane/vendor/cryptography-intel-build.json",
+    "control-plane/vendor/intel-build-tools.lock", "scripts/build_intel_cryptography.py",
+}
+INVENTORY_RESOLVED_AT = "2026-10-15T00:00:00Z"
+INVENTORY_SOURCE_DATE_EPOCH = 1792022400
 INVENTORY_PYTHON_REQUIRES = ">=3.11,<3.13"
 INVENTORY_POLICY = (
     "One exact lowest-common version set with target-specific wheel hashes for "
-    "glibc 2.17+/manylinux-compatible x86_64, macOS 11 x86_64/arm64, and "
+    "glibc 2.27+/manylinux-compatible x86_64, macOS 11 x86_64/arm64, and "
     "Windows amd64. Unlisted interpreters, libc families, platforms, and "
-    "architectures fail closed."
+    "architectures fail closed. Intel macOS Cryptography uses an independently "
+    "reviewed source-built wheel; all other wheels are publisher artifacts."
 )
 INVENTORY_SUBJECT_BINDING = (
     "Generated release SBOM binds the exact Git commit; this inventory binds "
@@ -446,7 +457,7 @@ def _wheel_is_compatible(filename: str, target: dict[str, object], name: str, ve
                 match = re.fullmatch(r"manylinux_(\d+)_(\d+)_x86_64", platform_tag)
                 if not match:
                     raise ReleaseError(f"wheel platform is incompatible with {target['id']}/{name}")
-                if (int(match.group(1)), int(match.group(2))) <= (2, 17):
+                if (int(match.group(1)), int(match.group(2))) <= (2, 27):
                     compatible_baseline = True
         if not compatible_baseline:
             raise ReleaseError(f"wheel requires a newer glibc baseline: {target['id']}/{name}")
@@ -486,7 +497,7 @@ def _load_target_evidence(root: Path, target_id: str) -> tuple[dict[str, object]
         or evidence.get("source_date_epoch") != INVENTORY_SOURCE_DATE_EPOCH
         or evidence.get("evidence_class") != "cross-target-pip-resolution-requiring-native-ci-confirmation"
         or evidence.get("resolver") != "pip / PyPI"
-        or evidence.get("platform_policy") != "Exact lowest-common lock with target-selected PyPI wheels"
+        or evidence.get("platform_policy") != "Exact lowest-common lock with target-selected reviewed wheels"
         or not re.fullmatch(r"[0-9a-f]{64}", str(evidence.get("source_report_sha256", "")))
         or not re.fullmatch(r"\d+(?:\.\d+){1,3}", str(evidence.get("source_pip_version", "")))
         or not isinstance(evidence.get("source_environment"), dict)
@@ -523,10 +534,16 @@ def _declared_requirements(root: Path) -> list[dict[str, str]]:
 def _parse_hash_lock(path: Path) -> dict[str, dict[str, object]]:
     logical = path.read_text(encoding="utf-8").replace("\\\n", " ")
     entries: dict[str, dict[str, object]] = {}
+    wheel_source_seen = False
     _, Requirement, Version = _packaging_types()
     for raw in logical.splitlines():
         value = raw.strip()
         if not value or value.startswith("#"):
+            continue
+        if value.startswith("--find-links"):
+            if wheel_source_seen or value != f"--find-links {OWNED_INTEL_WHEEL_URL}":
+                raise ReleaseError("lock contains an unreviewed wheel source")
+            wheel_source_seen = True
             continue
         hashes = re.findall(r"--hash=sha256:([0-9a-f]{64})(?:\s|$)", value)
         requirement_text = re.sub(r"\s*--hash=sha256:[0-9a-f]{64}(?:\s|$)", " ", value).strip()
@@ -544,6 +561,31 @@ def _parse_hash_lock(path: Path) -> dict[str, dict[str, object]]:
     if not entries:
         raise ReleaseError(f"{path.name} is empty")
     return entries
+
+
+def _load_intel_wheel_build(root: Path) -> dict[str, object]:
+    path = root / "control-plane/vendor/cryptography-intel-build.json"
+    try:
+        data = path.read_bytes()
+        record = json.loads(data)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ReleaseError("missing reviewed Intel wheel build evidence") from exc
+    if _sha256(data) != EXPECTED_INTEL_WHEEL_BUILD_SHA256:
+        raise ReleaseError("Intel wheel build evidence is not independently reviewed")
+    artifact = record.get("artifact", {})
+    parsed = urlsplit(str(artifact.get("url", "")))
+    filename = artifact.get("filename", "")
+    if (
+        artifact.get("url") != OWNED_INTEL_WHEEL_URL
+        or parsed.scheme != "https" or parsed.netloc != "raw.githubusercontent.com"
+        or not re.fullmatch(r"/mecaniser/elis-ads/[0-9a-f]{40}/control-plane/vendor/wheels/cryptography-50\.0\.2-cp311-abi3-macosx_11_0_x86_64\.whl", parsed.path)
+        or parsed.query or parsed.fragment or parsed.path.rsplit("/", 1)[-1] != filename
+    ):
+        raise ReleaseError("Intel wheel immutable source binding mismatch")
+    wheel = root / "control-plane/vendor/wheels" / filename
+    if not wheel.is_file() or _sha256(wheel.read_bytes()) != artifact.get("sha256"):
+        raise ReleaseError("Intel wheel bytes do not match reviewed build")
+    return artifact
 
 
 def _load_dependency_inventory(root: Path) -> dict[str, object]:
@@ -594,7 +636,7 @@ def _load_dependency_inventory(root: Path) -> dict[str, object]:
     ):
         raise ReleaseError("dependency inventory resolution evidence is incomplete")
     manifests = inventory["manifests"]
-    expected_manifest_paths = {"requirements.txt", "requirements-dev.txt", "requirements.lock", "requirements-dev.lock", "pyproject.toml"}
+    expected_manifest_paths = DEPENDENCY_MANIFEST_PATHS
     if not isinstance(manifests, list) or {item.get("path") for item in manifests if isinstance(item, dict)} != expected_manifest_paths or len(manifests) != len(expected_manifest_paths):
         raise ReleaseError("dependency inventory manifest coverage is incomplete or duplicated")
     for item in manifests:
@@ -602,6 +644,7 @@ def _load_dependency_inventory(root: Path) -> dict[str, object]:
         if not manifest_path.is_file() or item.get("sha256") != _sha256(manifest_path.read_bytes()):
             raise ReleaseError(f"dependency inventory manifest hash mismatch: {item.get('path')}")
 
+    intel_artifact = _load_intel_wheel_build(root)
     catalog: dict[tuple[str, str], dict[str, object]] = {}
     names_to_version: dict[str, str] = {}
     for component in inventory["component_catalog"]:
@@ -661,7 +704,7 @@ def _load_dependency_inventory(root: Path) -> dict[str, object]:
         observed = (target.get("profile"), target.get("python_version"), target.get("os"), target.get("arch"), target.get("abi"), len(target.get("components", [])))
         if expected is None or observed != expected:
             raise ReleaseError(f"dependency target matrix mismatch: {target_id}")
-        if target.get("implementation") != "CPython" or target.get("resolver") != "pip / PyPI" or target.get("platform_policy") != "Exact lowest-common lock with target-selected PyPI wheels" or not re.fullmatch(r"[0-9a-f]{64}", str(target.get("resolution_evidence_sha256", ""))):
+        if target.get("implementation") != "CPython" or target.get("resolver") != "pip / PyPI" or target.get("platform_policy") != "Exact lowest-common lock with target-selected reviewed wheels" or not re.fullmatch(r"[0-9a-f]{64}", str(target.get("resolution_evidence_sha256", ""))):
             raise ReleaseError(f"dependency target provenance mismatch: {target_id}")
         evidence, evidence_sha256 = _load_target_evidence(root, target_id)
         expected_environment = {
@@ -677,12 +720,15 @@ def _load_dependency_inventory(root: Path) -> dict[str, object]:
             if name in components or (name, component_version) not in catalog:
                 raise ReleaseError(f"duplicate or unknown target component in {target_id}: {name}")
             artifact = component.get("artifact")
-            if not isinstance(artifact, dict) or not re.fullmatch(r"[0-9a-f]{64}", str(artifact.get("sha256", ""))) or not str(artifact.get("url", "")).startswith("https://files.pythonhosted.org/"):
+            owned_intel = (name == "cryptography" and component_version == "50.0.2" and target["os"] == "macos" and target["arch"] == "x86_64")
+            if not isinstance(artifact, dict) or not re.fullmatch(r"[0-9a-f]{64}", str(artifact.get("sha256", ""))):
                 raise ReleaseError(f"target component lacks exact artifact evidence: {target_id}/{name}")
+            if owned_intel and artifact != intel_artifact:
+                raise ReleaseError(f"target Intel artifact differs from reviewed build: {target_id}/{name}")
             if artifact.get("filename") != str(artifact.get("url")).rsplit("/", 1)[-1]:
                 raise ReleaseError(f"target component artifact filename mismatch: {target_id}/{name}")
             parsed_url = urlsplit(str(artifact.get("url")))
-            if parsed_url.scheme != "https" or parsed_url.netloc != "files.pythonhosted.org" or parsed_url.query or parsed_url.fragment or unquote(PurePosixPath(parsed_url.path).name) != artifact.get("filename"):
+            if not owned_intel and (parsed_url.scheme != "https" or parsed_url.netloc != "files.pythonhosted.org" or parsed_url.query or parsed_url.fragment or unquote(PurePosixPath(parsed_url.path).name) != artifact.get("filename")):
                 raise ReleaseError(f"target component artifact URL binding mismatch: {target_id}/{name}")
             _wheel_is_compatible(artifact["filename"], target, name, component_version)
             if component.get("purl") != f"pkg:pypi/{name}@{component_version}":
@@ -887,11 +933,11 @@ def _load_external_runtime_dependencies(root: Path) -> dict[str, object]:
         raise ReleaseError("external runtime dependency manifest identity mismatch")
     sources = document["sources"]
     dependencies = document["dependencies"]
-    expected_source_ids = {"playwright-python-intro", "playwright-browsers", "playwright-ci", "weasyprint-69-install", "cyclonedx-1.5-json"}
+    expected_source_ids = {"playwright-python-intro", "playwright-browsers", "playwright-ci", "weasyprint-70-install", "cyclonedx-1.5-json"}
     if not isinstance(sources, list) or {item.get("id") for item in sources if isinstance(item, dict)} != expected_source_ids or len(sources) != len(expected_source_ids):
         raise ReleaseError("external runtime dependency source coverage mismatch")
     for source in sources:
-        if set(source) != {"id", "url", "publisher", "accessed_at"} or not str(source["url"]).startswith("https://") or source["accessed_at"] != "2026-07-11" or not source["publisher"]:
+        if set(source) != {"id", "url", "publisher", "accessed_at"} or not str(source["url"]).startswith("https://") or source["accessed_at"] != ("2026-10-15" if source["id"] == "weasyprint-70-install" else "2026-07-11") or not source["publisher"]:
             raise ReleaseError("external runtime dependency source metadata mismatch")
     if not isinstance(dependencies, list) or {item.get("id") for item in dependencies if isinstance(item, dict)} != {"playwright-browser-payload", "weasyprint-native-libraries"} or len(dependencies) != 2:
         raise ReleaseError("external runtime dependency coverage mismatch")
@@ -1212,8 +1258,7 @@ def verify_release(output_dir: Path, expected_commit: str, repository_root: Path
             if data != trusted_data or record["mode"] != trusted_mode:
                 raise ReleaseError(f"archive member differs from trusted Git commit: {relative}")
             if relative in {
-                "requirements.txt", "requirements-dev.txt", "requirements.lock",
-                "requirements-dev.lock", "pyproject.toml", "THIRD_PARTY_NOTICES.md",
+                *DEPENDENCY_MANIFEST_PATHS, INTEL_WHEEL_PATH, "THIRD_PARTY_NOTICES.md",
                 "control-plane/manifests/dependency-inventory.json",
                 "control-plane/manifests/external-runtime-dependencies.json",
                 ".claude-plugin/plugin.json",
@@ -1222,8 +1267,7 @@ def verify_release(output_dir: Path, expected_commit: str, repository_root: Path
 
     sbom = json.loads((output_dir / "sbom.cdx.json").read_text(encoding="utf-8"))
     required_archived = {
-        "requirements.txt", "requirements-dev.txt", "requirements.lock",
-        "requirements-dev.lock", "pyproject.toml", "THIRD_PARTY_NOTICES.md",
+        *DEPENDENCY_MANIFEST_PATHS, INTEL_WHEEL_PATH, "THIRD_PARTY_NOTICES.md",
         "control-plane/manifests/dependency-inventory.json",
         "control-plane/manifests/external-runtime-dependencies.json",
         ".claude-plugin/plugin.json",
@@ -1244,7 +1288,7 @@ def verify_release(output_dir: Path, expected_commit: str, repository_root: Path
         raise ReleaseError("release product identity disagrees with archived plugin manifest")
     inventory = json.loads(archived_dependency_files["control-plane/manifests/dependency-inventory.json"])
     manifest_records = inventory.get("manifests", []) if isinstance(inventory, dict) else []
-    if len(manifest_records) != 5:
+    if len(manifest_records) != len(DEPENDENCY_MANIFEST_PATHS) or {record.get("path") for record in manifest_records} != DEPENDENCY_MANIFEST_PATHS:
         raise ReleaseError("archived dependency manifest coverage is incomplete")
     for record in manifest_records:
         content = archived_dependency_files.get(record.get("path"))

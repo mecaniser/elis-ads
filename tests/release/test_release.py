@@ -89,12 +89,14 @@ def _repository(tmp_path: Path) -> Path:
     _write(root, "LICENSE", "MIT\n")
     source_root = RELEASE_SCRIPT.parents[1]
     for relative in (
-        "pyproject.toml", "requirements.txt", "requirements-dev.txt",
-        "requirements.lock", "requirements-dev.lock",
+        *sorted(release.DEPENDENCY_MANIFEST_PATHS),
         "THIRD_PARTY_NOTICES.md", "control-plane/manifests/dependency-inventory.json",
         "control-plane/manifests/external-runtime-dependencies.json",
     ):
         _write(root, relative, (source_root / relative).read_text(encoding="utf-8"))
+    wheel_path = root / release.INTEL_WHEEL_PATH
+    wheel_path.parent.mkdir(parents=True, exist_ok=True)
+    wheel_path.write_bytes((source_root / release.INTEL_WHEEL_PATH).read_bytes())
     for evidence in sorted((source_root / "control-plane/dependency-evidence").glob("*.json")):
         relative = evidence.relative_to(source_root).as_posix()
         _write(root, relative, evidence.read_text(encoding="utf-8"))
@@ -294,7 +296,8 @@ def test_notice_inventory_has_no_dangling_references_and_records_bundled_terms()
     assert {"pyphen-selected-wheel-documents", "reportlab-selected-wheel-documents", "matplotlib-selected-wheel-documents"} <= notices
     artifacts = {component["artifact"]["sha256"] for target in inventory["targets"] for component in target["components"]}
     covered = {digest for notice in inventory["bundled_notices"] for document in notice["documents"] for digest in document["artifact_sha256s"]} | {digest for notice in inventory["bundled_notices"] for digest in notice["documentless_artifact_sha256s"]}
-    assert covered == artifacts and len(artifacts) == 119
+    # Cryptography now uses separate ARM publisher and reviewed Intel wheels.
+    assert covered == artifacts and len(artifacts) == 120
     webencodings = next(item for item in inventory["bundled_notices"] if item["component"] == "webencodings")
     assert not webencodings["documents"] and len(webencodings["documentless_artifact_sha256s"]) == 1
     urllib3 = next(item for item in inventory["component_catalog"] if item["name"] == "urllib3")
@@ -413,8 +416,61 @@ def test_normalized_target_evidence_is_honest_about_foreign_source_and_native_ci
     windows = json.loads((root / "control-plane/dependency-evidence/development-windows-cp311.json").read_text(encoding="utf-8"))
     assert linux["evidence_class"] == "cross-target-pip-resolution-requiring-native-ci-confirmation"
     assert linux["source_environment"]["python_version"] == "3.14"
-    assert linux["source_environment"]["sys_platform"] == "linux"
+    assert linux["source_environment"]["sys_platform"] == "darwin"
     assert windows["normalization_notes"] and "colorama" in windows["normalization_notes"][0]
+
+
+def test_reviewed_intel_wheel_matches_bundled_bytes() -> None:
+    root = RELEASE_SCRIPT.parents[1]
+    artifact = release._load_intel_wheel_build(root)
+    assert artifact["filename"] == "cryptography-50.0.2-cp311-abi3-macosx_11_0_x86_64.whl"
+    assert artifact["url"] == release.OWNED_INTEL_WHEEL_URL
+
+
+def test_managed_installer_and_release_verifier_trust_the_same_inventory() -> None:
+    root = RELEASE_SCRIPT.parents[1]
+    receipt = release._load_local_module(root, "scripts/write_install_receipt.py", "install_receipt_anchor_test")
+    inventory_digest = hashlib.sha256((root / "control-plane/manifests/dependency-inventory.json").read_bytes()).hexdigest()
+    assert receipt.EXPECTED_INVENTORY_SHA256 == inventory_digest == release.EXPECTED_DEPENDENCY_INVENTORY_SHA256
+
+
+@pytest.mark.parametrize("suffix", ["?download=1", " --trusted-host attacker.invalid", "/other.whl"])
+def test_lock_rejects_unreviewed_find_links(tmp_path: Path, suffix: str) -> None:
+    lock = tmp_path / "requirements.lock"
+    lock.write_text(f"--find-links {release.OWNED_INTEL_WHEEL_URL}{suffix}\nexample==1.0 --hash=sha256:{'a' * 64}\n")
+    with pytest.raises(ReleaseError, match="unreviewed wheel source"):
+        release._parse_hash_lock(lock)
+
+
+@pytest.mark.parametrize("mutation", ["record", "wheel", "branch-url", "other-repository", "query"])
+def test_intel_wheel_rejects_tampering_and_mutable_sources(tmp_path: Path, monkeypatch, mutation: str) -> None:
+    source = RELEASE_SCRIPT.parents[1]
+    path = Path("control-plane/vendor/cryptography-intel-build.json")
+    record = json.loads((source / path).read_text())
+    artifact = record["artifact"]
+    wheel_path = Path("control-plane/vendor/wheels") / artifact["filename"]
+    (tmp_path / wheel_path).parent.mkdir(parents=True)
+    (tmp_path / wheel_path).write_bytes((source / wheel_path).read_bytes())
+    if mutation == "wheel":
+        (tmp_path / wheel_path).write_bytes(b"substituted wheel")
+    elif mutation == "record":
+        record["unreviewed"] = True
+    elif mutation == "branch-url":
+        parts = artifact["url"].split("/")
+        parts[5] = "main"
+        artifact["url"] = "/".join(parts)
+    elif mutation == "other-repository":
+        artifact["url"] = artifact["url"].replace("/mecaniser/elis-ads/", "/other/elis-ads/")
+    elif mutation == "query":
+        artifact["url"] += "?download=1"
+    data = (json.dumps(record, indent=2, sort_keys=True) + "\n").encode()
+    (tmp_path / path).write_bytes(data)
+    if mutation in {"branch-url", "other-repository", "query"}:
+        # Even a self-consistent candidate must obey the immutable repo policy.
+        monkeypatch.setattr(release, "EXPECTED_INTEL_WHEEL_BUILD_SHA256", hashlib.sha256(data).hexdigest())
+        monkeypatch.setattr(release, "OWNED_INTEL_WHEEL_URL", artifact["url"])
+    with pytest.raises(ReleaseError, match="Intel wheel"):
+        release._load_intel_wheel_build(tmp_path)
 
 
 def test_standalone_verify_rejects_self_consistent_archive_inventory_tamper(tmp_path: Path) -> None:

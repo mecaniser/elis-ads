@@ -1,5 +1,6 @@
 # Claude Ads development dependency lock
 # Exact versions and union hashes for the supported CPython 3.11/3.12 wheel matrix.
+--find-links https://raw.githubusercontent.com/mecaniser/elis-ads/d6db674700a7d731abefe7bdf0898dc86059cf1b/control-plane/vendor/wheels/cryptography-50.0.2-cp311-abi3-macosx_11_0_x86_64.whl
 cffi==2.1.0 \
     --hash=sha256:02cb7ff33ded4f1532476731f89ede53e2e488a8e6205515a82144246ffa7dcc \
     --hash=sha256:1e9f50d192a3e525b15a75ab5114e442d83d657b7ec29182a991bc9a88fd3a66 \
@@ -11,10 +12,11 @@ cffi==2.1.0 \
     --hash=sha256:f5bce581e6b8c235e566a14768a943b172ada3ed73537bb0c0be1edee312d4e7
 colorama==0.4.6 ; sys_platform == "win32" \
     --hash=sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6
-cryptography==48.0.1 \
-    --hash=sha256:39489bfca54c7a1f6b297efcd8bc608ab92d16c4ca631b0cad4da46724588b24 \
-    --hash=sha256:3e4a1a3232eef2e6c732827d5722db29a0cc8b27af2a4d865b094cf954be9ca1 \
-    --hash=sha256:f0d27a5696721ef7a672b8c810f6aded391058e0b9486e63e6d93baf765da691
+cryptography==50.0.2 \
+    --hash=sha256:630ebfea3bf689d075f82316324ff7433dc447fe6bc1bfc76524b74b4a9567d2 \
+    --hash=sha256:7afa5a6602a9f29af1f3a2965f831bae7c9d5d597b7cbb716d41ab3b7d89879c \
+    --hash=sha256:e22aa1a03abc13278f892b665c1aad7bedf2488fbdfda016dd68171207a45010 \
+    --hash=sha256:fa8f5efb344d6908a1ce62f4a24e2e5780f825d6f53f5f50ec5ffacac72936cb
 iniconfig==2.3.0 \
     --hash=sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12
 packaging==26.2 \

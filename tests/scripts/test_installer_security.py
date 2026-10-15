@@ -41,7 +41,7 @@ def _fake_python(tmp_path: Path, target: str, fail_venv: bool = False) -> Path:
     directory.mkdir()
     script = directory / "python3"
     if target.count("|") == 3:
-        target += "|glibc|2.17|supported" if "|linux|" in target else "|none|11.0|supported"
+        target += "|glibc|2.27|supported" if "|linux|" in target else "|none|11.0|supported"
     script.write_text(
         "#!/bin/sh\n"
         f"if [ \"$1\" = \"-c\" ]; then printf '%s\\n' '{target}'; exit 0; fi\n"
@@ -251,9 +251,14 @@ def test_installer_refuses_symlink_escape(tmp_path):
 
 
 @BASH_INSTALLER_ONLY
-def test_unsupported_python_fails_before_any_destination_mutation(tmp_path):
+@pytest.mark.parametrize("target", [
+    "cpython|3.14|linux|x86_64",
+    "cpython|3.11|linux|x86_64|glibc|2.17|unsupported",
+    "cpython|3.12|linux|x86_64|glibc|2.26|unsupported",
+])
+def test_unsupported_python_fails_before_any_destination_mutation(tmp_path, target):
     skills, agents = tmp_path / "skills", tmp_path / "agents"
-    fake_bin = _fake_python(tmp_path, "cpython|3.14|linux|x86_64")
+    fake_bin = _fake_python(tmp_path, target)
     result = subprocess.run(
         ["bash", str(ROOT / "install.sh"), "--target=claude", "--source=local", f"--skill-dir={skills}", f"--agent-dir={agents}"],
         cwd=ROOT, env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"}, capture_output=True, text=True, check=False,

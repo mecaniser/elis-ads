@@ -1,0 +1,47 @@
+{
+  "artifact": {
+    "filename": "cryptography-50.0.2-cp311-abi3-macosx_11_0_x86_64.whl",
+    "sha256": "e22aa1a03abc13278f892b665c1aad7bedf2488fbdfda016dd68171207a45010",
+    "url": "https://raw.githubusercontent.com/mecaniser/elis-ads/d6db674700a7d731abefe7bdf0898dc86059cf1b/control-plane/vendor/wheels/cryptography-50.0.2-cp311-abi3-macosx_11_0_x86_64.whl"
+  },
+  "build_evidence": {
+    "architecture": "x86_64",
+    "build_tools_lock_sha256": "11244dc08b9602af9bb8f06cda4a221cd78a6d8bbc62f9b748fa5ed8e2edd408",
+    "cargo_lock_sha256": "98778208027ce05bfff0db88c290f28355eb20e685f0c728775359fb91a1a4c4",
+    "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: x86_64-apple-darwin24.6.0\nThread model: posix",
+    "openssl_license_sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a",
+    "python": "3.11.9",
+    "runner_os": "15.7.9",
+    "rust": "rustc 1.90.0 (1159e78c4 2025-09-14)",
+    "schema_version": "1.0.0",
+    "source_commit": "1c1c6aedbfbe6f922ffdbaa1be7eaf65e20f5aff",
+    "sources": {
+      "cryptography": {
+        "sha256": "7b46165bb56eb4704e2eaaf86f3c940d19154535d9b0ca7d6d590b04060e00d5",
+        "url": "https://files.pythonhosted.org/packages/9d/af/182eb91b0df3fe75c4d9f26fe70684569566745f6ba7e5c9c73a862c5252/cryptography-50.0.2.tar.gz",
+        "version": "50.0.2"
+      },
+      "openssl": {
+        "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a",
+        "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz",
+        "version": "3.5.9"
+      }
+    },
+    "verification": {
+      "ed25519_sign_verify": "passed",
+      "openssl_tests": "passed",
+      "static_openssl": true
+    },
+    "wheel": {
+      "filename": "cryptography-50.0.2-cp311-abi3-macosx_11_0_x86_64.whl",
+      "sha256": "e22aa1a03abc13278f892b665c1aad7bedf2488fbdfda016dd68171207a45010"
+    },
+    "workflow_run_id": "38780122493"
+  },
+  "normalization_notes": [
+    "Compiler installation directory omitted; original GitHub build evidence is bound by its SHA-256."
+  ],
+  "raw_build_evidence_sha256": "143cebb3153589841e4d68baaed1fafa0428c40254f9b88bd17ccbfb96c297c3",
+  "schema_version": "1.0.0",
+  "workflow_run_url": "https://github.com/mecaniser/elis-ads/actions/runs/38780122493"
+}
