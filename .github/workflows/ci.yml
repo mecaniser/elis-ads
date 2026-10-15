@@ -13,7 +13,7 @@ permissions:
 jobs:
   repository-audit:
     name: Repository audit
-    runs-on: [self-hosted, Linux, X64, owned-linux-x64]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
@@ -40,7 +40,7 @@ jobs:
 
   core-tests:
     name: Core tests (Python ${{ matrix.python-version }})
-    runs-on: [self-hosted, Linux, X64, owned-linux-x64]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -66,7 +66,7 @@ jobs:
 
   full-tests:
     name: Full test suite
-    runs-on: [self-hosted, Linux, X64, owned-linux-x64]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
@@ -96,7 +96,7 @@ jobs:
 
   installer-matrix:
     name: Installer tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
-    runs-on: ${{ fromJSON(matrix.os == 'macos-15' && '["self-hosted", "macOS", "ARM64", "owned-macos15"]' || format('["{0}"]', matrix.os)) }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -200,7 +200,7 @@ jobs:
 
   package-smoke:
     name: Reproducible package smoke test
-    runs-on: [self-hosted, Linux, X64, owned-linux-x64]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [repository-audit, core-tests, full-tests, installer-matrix]
 
