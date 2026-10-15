@@ -53,7 +53,9 @@ def verify_load_commands(commands: str) -> None:
         if not re.search(r"\bcmd LC_(?!ID_DYLIB\b)\w*DYLIB\b", block):
             continue
         name = re.search(r"\bname (.+) \(offset \d+\)", block)
-        if not name or not name.group(1).startswith(("/usr/lib/", "/System/Library/")):
+        if not name or not name.group(1).startswith(("/usr/lib/", "/System/Library/")) or any(
+            segment in {".", ".."} for segment in name.group(1).split("/")
+        ):
             raise SystemExit("Wheel links a non-system dynamic library")
 
 

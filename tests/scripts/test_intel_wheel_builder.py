@@ -43,3 +43,9 @@ def test_unsupported_or_missing_minimum_rejected(minimum):
 def test_missing_dependency_name_rejected():
     with pytest.raises(SystemExit, match="non-system"):
         builder.verify_load_commands(commands().replace("name /usr/lib/libSystem.B.dylib", "invalid"))
+
+
+@pytest.mark.parametrize("library", ["/usr/lib/../../tmp/libcrypto.dylib", "/System/Library/../libcrypto.dylib", "/usr/lib/./libcrypto.dylib"])
+def test_system_library_prefix_cannot_hide_traversal(library):
+    with pytest.raises(SystemExit, match="non-system"):
+        builder.verify_load_commands(commands(library=library))
