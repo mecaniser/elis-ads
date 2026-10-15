@@ -96,7 +96,7 @@ jobs:
 
   installer-matrix:
     name: Installer tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
-    runs-on: ${{ fromJSON(matrix.os == 'ubuntu-latest' && '["self-hosted", "Linux", "X64", "owned-linux-x64"]' || matrix.os == 'macos-15' && '["self-hosted", "macOS", "ARM64", "owned-macos15"]' || format('["{0}"]', matrix.os)) }}
+    runs-on: ${{ fromJSON(matrix.os == 'macos-15' && '["self-hosted", "macOS", "ARM64", "owned-macos15"]' || format('["{0}"]', matrix.os)) }}
     timeout-minutes: 25
     strategy:
       fail-fast: false
