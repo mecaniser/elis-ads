@@ -84,9 +84,14 @@ capability loses its test evidence, or required remote CI does not pass.
 - Uninstall removes only ownership-manifest entries and leaves no unowned files.
 - A clean checkout reproducibly builds the release archive, release manifest,
   SHA-256 checksums, SBOM, and license notices.
-- Runtime and development locks use exact versions plus the union of publisher
+- Runtime and development locks use exact versions plus the union of reviewed
   wheel hashes for every declared CPython 3.11/3.12 Linux, macOS, and Windows
-  target. Installers use `--require-hashes --only-binary=:all:`, run `pip check`,
+  target. Wheels must be publisher artifacts except for Cryptography 50.0.2 on
+  Intel macOS: that wheel requires a verified native build from hash-pinned
+  publisher sources, recorded build and license evidence, independent review,
+  and an immutable repository URL and wheel digest pinned by the verifier.
+  Managed Linux installation requires glibc 2.27 or newer. Installers use
+  `--require-hashes --only-binary=:all:`, run `pip check`,
   and fail before mutation when the interpreter target is not in that matrix.
 - The CycloneDX release SBOM contains the application and runtime closure only;
   the separate development lock/inventory remains audit evidence, not an

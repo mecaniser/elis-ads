@@ -2,12 +2,6 @@ name: Build verified Intel Cryptography wheel
 
 on:
   workflow_dispatch:
-  push:
-    branches: [codex/ads-dependency-security]
-    paths:
-      - .github/workflows/build-intel-cryptography.yml
-      - scripts/build_intel_cryptography.py
-      - control-plane/vendor/intel-build-tools.lock
 
 permissions:
   contents: read

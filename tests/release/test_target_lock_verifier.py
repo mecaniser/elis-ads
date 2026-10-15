@@ -22,7 +22,8 @@ def target_case(tmp_path, monkeypatch):
     target = next(item for item in inventory["targets"] if item["id"] == "runtime-linux-cp311")
     monkeypatch.setattr(verifier.release, "_load_dependency_inventory", lambda root: inventory)
     monkeypatch.setattr(verifier, "native_target_id", lambda profile: "runtime-linux-cp311")
-    monkeypatch.setattr(verifier.subprocess, "run", lambda *a, **k: SimpleNamespace(returncode=0, stdout="a" * 40 + "\n"))
+    original_run = verifier.subprocess.run
+    monkeypatch.setattr(verifier.subprocess, "run", lambda *a, **k: SimpleNamespace(returncode=0, stdout="a" * 40 + "\n") if a[0] == ["git", "rev-parse", "HEAD"] else original_run(*a, **k))
     report = {"pip_version": __import__("pip").__version__, "install": []}
     wheels = tmp_path / "wheels"; wheels.mkdir()
     expected_hashes = {}
@@ -71,3 +72,20 @@ def test_native_report_rejects_wrong_wheel_set(target_case):
 def test_native_target_rejects_unsupported_interpreter(monkeypatch):
     monkeypatch.setattr(verifier.sys, "version_info", (3, 14, 0))
     with pytest.raises(verifier.release.ReleaseError, match="3.11 or 3.12"): verifier.native_target_id("runtime")
+
+
+@pytest.mark.parametrize("libc,version,supported", [
+    ("glibc", "2.17", False), ("glibc", "2.26", False),
+    ("glibc", "2.27", True), ("glibc", "2.39", True),
+    ("musl", "1.2", False), ("glibc", "unknown", False),
+])
+def test_native_linux_glibc_security_baseline(monkeypatch, libc, version, supported):
+    monkeypatch.setattr(verifier.sys, "version_info", __import__("collections").namedtuple("VersionInfo", "major minor micro")(3, 11, 0))
+    monkeypatch.setattr(verifier.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(verifier.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(verifier.platform, "libc_ver", lambda: (libc, version))
+    if supported:
+        assert verifier.native_target_id("runtime") == "runtime-linux-cp311"
+    else:
+        with pytest.raises(verifier.release.ReleaseError, match="glibc >=2.27"):
+            verifier.native_target_id("runtime")

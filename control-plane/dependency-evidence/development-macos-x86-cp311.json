@@ -13,14 +13,14 @@
     },
     {
       "artifact": {
-        "filename": "cryptography-48.0.1-cp311-abi3-macosx_10_9_universal2.whl",
-        "sha256": "3e4a1a3232eef2e6c732827d5722db29a0cc8b27af2a4d865b094cf954be9ca1",
-        "url": "https://files.pythonhosted.org/packages/1b/bc/ee4137cbbe105652c0ee4252792b78fc8e7afa4b8e61d9d5dc05a7f45731/cryptography-48.0.1-cp311-abi3-macosx_10_9_universal2.whl"
+        "filename": "cryptography-50.0.2-cp311-abi3-macosx_11_0_x86_64.whl",
+        "sha256": "e22aa1a03abc13278f892b665c1aad7bedf2488fbdfda016dd68171207a45010",
+        "url": "https://raw.githubusercontent.com/mecaniser/elis-ads/d6db674700a7d731abefe7bdf0898dc86059cf1b/control-plane/vendor/wheels/cryptography-50.0.2-cp311-abi3-macosx_11_0_x86_64.whl"
       },
       "direct": true,
       "name": "cryptography",
-      "purl": "pkg:pypi/cryptography@48.0.1",
-      "version": "48.0.1"
+      "purl": "pkg:pypi/cryptography@50.0.2",
+      "version": "50.0.2"
     },
     {
       "artifact": {
@@ -110,25 +110,27 @@
   },
   "evidence_class": "cross-target-pip-resolution-requiring-native-ci-confirmation",
   "evidence_id": "development-macos-x86-cp311",
-  "normalization_notes": [],
-  "platform_policy": "Exact lowest-common lock with target-selected PyPI wheels",
-  "resolved_at": "2026-07-11T00:00:00Z",
+  "normalization_notes": [
+    "Explicit target closure, including Windows-only colorama where applicable, selected with pip --no-deps to avoid host marker evaluation in cross-platform resolution. Existing unaffected wheel URLs are retained; updated packages are selected by pip for the target. Publisher dependency edges are validated separately by the release verifier; native CI must confirm installation and pip check."
+  ],
+  "platform_policy": "Exact lowest-common lock with target-selected reviewed wheels",
+  "resolved_at": "2026-10-15T00:00:00Z",
   "resolver": "pip / PyPI",
   "schema_version": "1.0.0",
-  "source_date_epoch": 1783728000,
+  "source_date_epoch": 1792022400,
   "source_environment": {
     "implementation_name": "cpython",
-    "implementation_version": "3.14.4",
+    "implementation_version": "3.14.7",
     "os_name": "posix",
-    "platform_machine": "x86_64",
+    "platform_machine": "arm64",
     "platform_python_implementation": "CPython",
-    "platform_release": "6.19.14-101.fc44.x86_64",
-    "platform_system": "Linux",
-    "platform_version": "#1 SMP PREEMPT_DYNAMIC Fri May  8 18:24:24 UTC 2026",
-    "python_full_version": "3.14.4",
+    "platform_release": "27.2.0",
+    "platform_system": "Darwin",
+    "platform_version": "Darwin Kernel Version 27.2.0: Tue Sep 29 22:00:39 PDT 2026; root:xnu-13432.40.177.0.3~56/RELEASE_ARM64_T6000",
+    "python_full_version": "3.14.7",
     "python_version": "3.14",
-    "sys_platform": "linux"
+    "sys_platform": "darwin"
   },
-  "source_pip_version": "26.0.1",
-  "source_report_sha256": "41d99080b681d00aff4895baa509c6688100ecbc00f26b3274e7500bb336e17e"
+  "source_pip_version": "26.2.1",
+  "source_report_sha256": "cd802a4129f6dbe954f98f410272b82bcc81a3f1e438c5b98e3c37481bb639b9"
 }

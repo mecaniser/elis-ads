@@ -1,9 +1,12 @@
 # Persistent local CI for elis-ads
 
-Linux jobs use disposable Ubuntu 24.04 x86-64 QEMU guests on owned Apple Silicon
-hardware, labelled `owned-linux-x64`. Apple Silicon jobs use disposable macOS 15
-Tart guests, labelled `owned-macos15`. Windows and Intel macOS tests remain hosted by explicit
-owner choice. All matrix entries, check commands, triggers and failure semantics
+Linux core/full tests, audits, and packaging use disposable Ubuntu 24.04 x86-64
+QEMU guests on owned Apple Silicon hardware, labelled `owned-linux-x64`.
+Apple Silicon jobs use disposable macOS 15 Tart guests, labelled `owned-macos15`.
+Windows, Intel macOS, and the two Linux installer jobs remain hosted by explicit
+owner choice. Linux installers exceeded their existing 25-minute timeout under
+x64 emulation; their checks and timeout remain unchanged. All matrix entries,
+check commands, triggers and failure semantics
 are retained. Previously inactive workflows remain inactive.
 
 ## Linux
