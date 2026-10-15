@@ -34,7 +34,7 @@ Set 4 CPUs and 4096 MB memory. Run with `--no-graphics --no-audio
 --no-usb-accessories --no-clipboard`, with no host shares. Before registration:
 
 1. Generate the host-only management Ed25519 key outside all checkouts.
-2. Run `macos/provision.sh` as root in the pristine guest, passing its public key.
+2. Run `CI_PRISTINE_GUEST=1 bash macos/provision.sh` as root in the pristine guest, passing its public key.
 3. Run `macos/python-toolcache.sh` as root; install poppler as the job account.
 4. Pin the guest SSH public host key as `owned-macos15-base.hostkey` beside the
    management key, prefixed with the base name (SSH HostKeyAlias).

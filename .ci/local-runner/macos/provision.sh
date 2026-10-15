@@ -2,24 +2,31 @@
 # Root, in a pristine Tart macOS guest only. First argument: management public key.
 set -euo pipefail
 [[ $(uname -s) == Darwin && $(id -u) == 0 ]]
-[[ -d /Users/admin && ! -d /Users/sergio_m1_promax ]]
+# Explicit provisioning acknowledgement; never run against the host.
+[[ ${CI_PRISTINE_GUEST:-} == 1 && $(id -u admin) == 501 ]]
+ds_users=/Users
+job_home=$(dscl . -read "$ds_users/admin" NFSHomeDirectory | cut -d ' ' -f 2-)
+[[ -d "$job_home" ]]
+home_parent=$(dirname "$job_home")
+management_home="$home_parent/ciadmin"
+tool_home="$home_parent/runner"
 key=${1:?management public key required}
 gateway=$(/sbin/route -n get default | awk '/gateway:/{print $2}')
 [[ $gateway =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]
 # SSH management has its own identity; no private key is installed in the guest.
-dscl . -create /Users/ciadmin
-dscl . -create /Users/ciadmin UserShell /bin/bash
-dscl . -create /Users/ciadmin UniqueID 550
-dscl . -create /Users/ciadmin PrimaryGroupID 20
-dscl . -create /Users/ciadmin NFSHomeDirectory /Users/ciadmin
-dscl . -create /Users/ciadmin RealName 'CI Management'
-dscl . -create /Users/ciadmin Password '*'
+dscl . -create "$ds_users/ciadmin"
+dscl . -create "$ds_users/ciadmin" UserShell /bin/bash
+dscl . -create "$ds_users/ciadmin" UniqueID 550
+dscl . -create "$ds_users/ciadmin" PrimaryGroupID 20
+dscl . -create "$ds_users/ciadmin" NFSHomeDirectory "${management_home}"
+dscl . -create "$ds_users/ciadmin" RealName 'CI Management'
+dscl . -create "$ds_users/ciadmin" Password '*'
 dseditgroup -o edit -a ciadmin -t user com.apple.access_ssh
-mkdir -p /Users/ciadmin/.ssh
-printf '%s\n' "$key" > /Users/ciadmin/.ssh/authorized_keys
-chown -R ciadmin:staff /Users/ciadmin
-chmod 700 /Users/ciadmin /Users/ciadmin/.ssh
-chmod 600 /Users/ciadmin/.ssh/authorized_keys
+mkdir -p "${management_home}/.ssh"
+printf '%s\n' "$key" > "${management_home}/.ssh/authorized_keys"
+chown -R ciadmin:staff "${management_home}"
+chmod 700 "${management_home}" "${management_home}/.ssh"
+chmod 600 "${management_home}/.ssh/authorized_keys"
 mkdir -p /etc/sudoers.d
 printf 'ciadmin ALL=(ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/ci-management
 chmod 440 /etc/sudoers.d/ci-management
@@ -45,12 +52,12 @@ AllowTcpForwarding no
 X11Forwarding no
 SSH
 /usr/sbin/sshd -t
-mkdir -p /Users/admin/actions-runner /Users/runner/hostedtoolcache
-chown -R admin:staff /Users/admin/actions-runner /Users/runner
+mkdir -p "${job_home}/actions-runner" "${tool_home}/hostedtoolcache"
+chown -R admin:staff "${job_home}/actions-runner" "${tool_home}"
 curl -fsSL https://github.com/actions/runner/releases/download/v2.338.0/actions-runner-osx-arm64-2.338.0.tar.gz -o /tmp/runner.tar.gz
 echo 'df4cebda25c86a886ed204e49fee63f5c2e7cec5f447b5c98440a826bbdf9df2  /tmp/runner.tar.gz' | shasum -a 256 -c -
-tar -xzf /tmp/runner.tar.gz -C /Users/admin/actions-runner
-chown -R admin:staff /Users/admin/actions-runner
+tar -xzf /tmp/runner.tar.gz -C "${job_home}/actions-runner"
+chown -R admin:staff "${job_home}/actions-runner"
 rm /tmp/runner.tar.gz
 cat > /etc/pf.conf <<PF
 set block-policy drop
@@ -82,20 +89,20 @@ cat > /Library/LaunchDaemons/com.owned-ci.firewall.plist <<'PLIST'
 <key>RunAtLoad</key><true/>
 </dict></plist>
 PLIST
-cat > /Library/LaunchDaemons/com.owned-ci.runner.plist <<'PLIST'
+cat > /Library/LaunchDaemons/com.owned-ci.runner.plist <<PLIST
 <?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict>
 <key>Label</key><string>com.owned-ci.runner</string>
 <key>UserName</key><string>admin</string>
-<key>WorkingDirectory</key><string>/Users/admin/actions-runner</string>
-<key>ProgramArguments</key><array><string>/Users/admin/actions-runner/run.sh</string></array>
+<key>WorkingDirectory</key><string>${job_home}/actions-runner</string>
+<key>ProgramArguments</key><array><string>${job_home}/actions-runner/run.sh</string></array>
 <key>EnvironmentVariables</key><dict>
-<key>HOME</key><string>/Users/admin</string>
+<key>HOME</key><string>${job_home}</string>
 <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-<key>RUNNER_TOOL_CACHE</key><string>/Users/runner/hostedtoolcache</string>
+<key>RUNNER_TOOL_CACHE</key><string>${tool_home}/hostedtoolcache</string>
 </dict>
 <key>RunAtLoad</key><true/>
-<key>StandardOutPath</key><string>/Users/admin/runner.log</string>
-<key>StandardErrorPath</key><string>/Users/admin/runner.log</string>
+<key>StandardOutPath</key><string>${job_home}/runner.log</string>
+<key>StandardErrorPath</key><string>${job_home}/runner.log</string>
 </dict></plist>
 PLIST
 # Do NOT load the runner in a base. Disable automatic launch until host registers a clone.

@@ -58,8 +58,8 @@ def register(ip):
     # Fail closed before issuing any token or running repository code.
     guest(ip, 'sudo /usr/local/sbin/ci-preflight')
     token = api(f'repos/{REPO}/actions/runners/registration-token', 'POST')['token']
-    configure = ("sudo -u admin env HOME=/Users/admin /bin/bash -c "
-                 "'cd /Users/admin/actions-runner && export ACTIONS_RUNNER_INPUT_TOKEN=\"$(cat)\" && "
+    configure = ("sudo -u admin -H /bin/bash -c "
+                 "'cd ~admin/actions-runner && export ACTIONS_RUNNER_INPUT_TOKEN=\"$(cat)\" && "
                  f"./config.sh --unattended --ephemeral --url https://github.com/{REPO} "
                  f"--name {WORKER} --labels {LABEL} --work _work'")
     guest(ip, configure, data=token)
