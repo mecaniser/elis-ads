@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import hashlib
+import base64
+import csv
+import io
 import json
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -76,12 +80,46 @@ def main() -> None:
         if len(wheels) != 1 or not wheels[0].name.endswith("macosx_11_0_x86_64.whl"):
             raise SystemExit("Unexpected wheel identity/platform")
         wheel = wheels[0]
+        # Preserve the statically linked OpenSSL notice inside the distributed
+        # wheel and update RECORD, without changing any executable payload.
+        with zipfile.ZipFile(wheel) as bundle:
+            contents = {name: bundle.read(name) for name in bundle.namelist()}
+        dist_info = "cryptography-50.0.2.dist-info"
+        license_path = f"{dist_info}/licenses/OPENSSL-LICENSE.txt"
+        contents[license_path] = (output / "OPENSSL-LICENSE.txt").read_bytes()
+        record_path = f"{dist_info}/RECORD"
+        record = io.StringIO()
+        writer = csv.writer(record, lineterminator="\n")
+        for name, data in sorted(contents.items()):
+            if name != record_path:
+                digest = base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=").decode()
+                writer.writerow([name, f"sha256={digest}", len(data)])
+        writer.writerow([record_path, "", ""])
+        contents[record_path] = record.getvalue().encode()
+        with zipfile.ZipFile(wheel, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+            for name, data in sorted(contents.items()):
+                bundle.writestr(name, data)
+        metadata = contents[f"{dist_info}/METADATA"].decode()
+        tags = contents[f"{dist_info}/WHEEL"].decode()
+        if "\nVersion: 50.0.2\n" not in metadata or "Tag: cp311-abi3-macosx_11_0_x86_64" not in tags:
+            raise SystemExit("Wheel metadata must support CPython 3.11 and 3.12 through abi3")
         with zipfile.ZipFile(wheel) as bundle:
             bundle.extractall(work / "wheel")
         binaries = list((work / "wheel").rglob("*.so"))
-        links = [run("otool", "-L", str(binary)) for binary in binaries]
-        if not binaries or any("libssl" in line or "libcrypto" in line or "/opt/" in line or "/usr/local/" in line for line in "\n".join(links).splitlines()[1:]):
-            raise SystemExit("Wheel must statically link OpenSSL and avoid external package-manager libraries")
+        if not binaries:
+            raise SystemExit("Wheel has no native module")
+        for binary in binaries:
+            if run("lipo", "-archs", str(binary)) != "x86_64":
+                raise SystemExit("Wheel contains a non-Intel native module")
+            commands = run("otool", "-l", str(binary))
+            minimums = re.findall(r"(?:minos|\bversion)\s+(\d+\.\d+(?:\.\d+)?)", commands)
+            # macOS modern linker emits LC_BUILD_VERSION/minos. Reject absence.
+            minimums = re.findall(r"minos\s+(\d+\.\d+(?:\.\d+)?)", commands)
+            if not minimums or any(tuple(map(int, value.split('.')[:2])) > (11, 0) for value in minimums):
+                raise SystemExit("Wheel native module exceeds macOS 11 minimum")
+            links = run("otool", "-L", str(binary)).splitlines()[1:]
+            if any(not line.strip().startswith(("/usr/lib/", "/System/Library/")) for line in links):
+                raise SystemExit("Wheel links a non-system dynamic library")
         run(sys.executable, "-m", "pip", "install", "--no-deps", str(wheel))
         run(sys.executable, "-c", "from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; from cryptography.hazmat.backends.openssl.backend import backend; k=Ed25519PrivateKey.generate(); k.public_key().verify(k.sign(b'ci'),b'ci'); assert backend.openssl_version_text().startswith('OpenSSL 3.5.9'); print(backend.openssl_version_text())")
         evidence["wheel"] = {"filename": wheel.name, "sha256": sha(wheel)}
