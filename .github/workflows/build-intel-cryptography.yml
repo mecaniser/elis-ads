@@ -22,7 +22,8 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install hash-locked build tools
-        run: python -m pip install --require-hashes --only-binary=:all: -r control-plane/vendor/intel-build-tools.lock
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r control-plane/vendor/intel-build-tools.lock
       - name: Install pinned Rust toolchain
         run: rustup toolchain install 1.90.0 --profile minimal
       - name: Build and verify pinned sources
@@ -30,7 +31,7 @@ jobs:
           RUSTUP_TOOLCHAIN: 1.90.0
         run: python scripts/build_intel_cryptography.py
       - name: Upload wheel and build evidence for independent review
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: intel-cryptography-50.0.2
           path: intel-wheel-output/
