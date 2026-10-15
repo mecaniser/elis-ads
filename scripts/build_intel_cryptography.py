@@ -38,9 +38,23 @@ def sha(path: Path) -> str:
 
 
 def run(*args: str, cwd: Path | None = None, env=None) -> str:
-    result = subprocess.run(args, cwd=cwd, env=env, check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    result = subprocess.run(args, cwd=cwd, env=env, check=False, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     print(result.stdout, flush=True)
+    result.check_returncode()
     return result.stdout.strip()
+
+
+def verify_load_commands(commands: str) -> None:
+    minimums = re.findall(r"minos\s+(\d+\.\d+(?:\.\d+)?)", commands)
+    if not minimums or any(tuple(map(int, value.split('.'))) > (11, 0, 0) for value in minimums):
+        raise SystemExit("Wheel native module exceeds macOS 11 minimum")
+    for block in commands.split("Load command "):
+        # LC_ID_DYLIB declares this binary's own identity, not a loaded dependency.
+        if not re.search(r"\bcmd LC_(?!ID_DYLIB\b)\w*DYLIB\b", block):
+            continue
+        name = re.search(r"\bname (.+) \(offset \d+\)", block)
+        if not name or not name.group(1).startswith(("/usr/lib/", "/System/Library/")):
+            raise SystemExit("Wheel links a non-system dynamic library")
 
 
 def main() -> None:
@@ -112,14 +126,8 @@ def main() -> None:
             if run("lipo", "-archs", str(binary)) != "x86_64":
                 raise SystemExit("Wheel contains a non-Intel native module")
             commands = run("otool", "-l", str(binary))
-            minimums = re.findall(r"(?:minos|\bversion)\s+(\d+\.\d+(?:\.\d+)?)", commands)
-            # macOS modern linker emits LC_BUILD_VERSION/minos. Reject absence.
-            minimums = re.findall(r"minos\s+(\d+\.\d+(?:\.\d+)?)", commands)
-            if not minimums or any(tuple(map(int, value.split('.')[:2])) > (11, 0) for value in minimums):
-                raise SystemExit("Wheel native module exceeds macOS 11 minimum")
-            links = run("otool", "-L", str(binary)).splitlines()[1:]
-            if any(not line.strip().startswith(("/usr/lib/", "/System/Library/")) for line in links):
-                raise SystemExit("Wheel links a non-system dynamic library")
+            verify_load_commands(commands)
+            run("otool", "-L", str(binary))
         run(sys.executable, "-m", "pip", "install", "--no-deps", str(wheel))
         run(sys.executable, "-c", "from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; from cryptography.hazmat.backends.openssl.backend import backend; k=Ed25519PrivateKey.generate(); k.public_key().verify(k.sign(b'ci'),b'ci'); assert backend.openssl_version_text().startswith('OpenSSL 3.5.9'); print(backend.openssl_version_text())")
         evidence["wheel"] = {"filename": wheel.name, "sha256": sha(wheel)}
